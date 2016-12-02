@@ -135,11 +135,11 @@ class SubNames:
         name_combination += ming
         name_combination += en_name
         name_combination += self.combine(xing, ming, name_split)
+        self.save(self.combine(name_combination, en_name, name_split))
         name_combination += self.combine(xing, en_name, name_split)
         name_combination += self.combine(ming, en_name, name_split)
         name_combination = list(set(name_combination))
         self.names = self.save(name_combination)
-        self.save(self.combine(self.names, en_name, name_split))
 
     def _load_birthday(self, birthday):
         birthday_combination = []
