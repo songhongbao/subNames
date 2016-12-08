@@ -8,7 +8,7 @@
 
 import optparse
 import sys
-import lunarcalendar
+import nongli
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -20,13 +20,35 @@ class SubNames:
         self.combination = []
         self.length = info.length
         self._load_name(info.xing, info.ming, info.en_name)
-        print len(self.combination)
         self._load_birthday(info.birthday)
-        print len(self.combination)
         self._load_company(info.company)
-        print len(self.combination)
-        print self.combination
-        # print self.names
+        self._load_love(info.love)
+        # print len(self.combination)
+
+    def output(self, file_name='result'):
+        level_1 = ''
+        level_2 = ''
+        level_3 = ''
+        level_4 = ''
+        rules = [lambda s: any(x.isupper() for x in s),
+                 lambda s: any(x.islower() for x in s),
+                 lambda s: any(x.isdigit() for x in s),
+                 lambda s: any(x in self.split for x in s)
+                 ]
+        for value in self.combination:
+            level = sum([int(rule(value)) for rule in rules])
+            if level == 1:
+                level_1 += value + "\n"
+            elif level == 2:
+                level_2 += value + "\n"
+            else:
+                level_3 += value + "\n"
+        f = open(file_name + '_1.txt', 'w')
+        f.write(level_1)
+        f = open(file_name + '_2.txt', 'w')
+        f.write(level_2)
+        f = open(file_name + '_3.txt', 'w')
+        f.write(level_3)
 
     @staticmethod
     def load_file(file_name):
@@ -43,8 +65,12 @@ class SubNames:
             return combination
         for _a in a:
             for _b in b:
+                # upper combine upper filter
+                if any(x.isupper() for x in _a) and any(x.isupper() for x in _a) and any(x.islower() for x in str(_a + _b)):
+                    continue
                 combination.append(_a + _b)
                 combination.append(_b + _a)
+                # split char only once filter
                 if list(set(_a).intersection(set(self.split))) or list(set(_b).intersection(set(self.split))):
                     continue
                 for _split in split:
@@ -85,14 +111,15 @@ class SubNames:
             # filter: length_max 12, diff type
             if len(value) > 12:
                 continue
-            rules = [lambda s: any(x.isupper() for x in s),
+            rules = [lambda s: sum([int(x.isupper()) for x in s]),
                      lambda s: any(x.isdigit() for x in s),
-                     lambda s: any(x in self.split for x in s)
+                     lambda s: sum([int(x in self.split) for x in s])
                      ]
             num = sum([int(rule(value)) for rule in rules])
             if num > 1:
                 continue
             filter_combination.append(value)
+        self.combination = list(set(self.combination))
         return filter_combination
 
     def _load_name(self, xing, ming, en_name):
@@ -106,6 +133,7 @@ class SubNames:
             en_name = []
         name_combination += xing
         name_combination += ming
+        name_combination += en_name
         name_combination += self.combine(xing, ming, name_split)
         name_combination += self.combine(xing, en_name, name_split)
         name_combination += self.combine(ming, en_name, name_split)
@@ -118,7 +146,7 @@ class SubNames:
         birthday_split = '._-@!#'
         if birthday.isdigit():
             if len(birthday) == 8:
-                for birth in [birthday, lunarcalendar.get_ludar_date(birthday)]:
+                for birth in [birthday, nongli.get_nongli(birthday)]:
                     birthday_combination += [birth[0:4], birth[4:], birth[0:]]
                     birthday_combination += [str(int(birth[4:6])) + str(int(birth[6:8]))]
                     # birth[0:4] + str(int(birth[4:6])) + str(int(birth[6:8]))]
@@ -130,20 +158,35 @@ class SubNames:
         self.save(self.combine(self.names, self.birthday, birthday_split))
 
     def _load_company(self, company):
-        company_split = '@/.'
+        company_split = '@/_.'
         self.company = [company.lower(), company.capitalize()]
         self.save(self.combine(self.names, self.company, company_split))
 
+    def _load_love(self, love):
+        love_split = '@_/.'
+        love_combination = []
+        love_combination += list('0123456789')
+        # love_combination += list('abcdefghijklmnopqrstuvwxyz')
+        # love_combination += list('abcdefghijklmnopqrstuvwxyz'.upper())
+        love_combination += ['123', '132', '213', '231', '312', '321', '1234', '12345', '123456', '521', '1314']
+        if love not in love_combination:
+            love_combination.append(love)
+        self.save(self.combine(self.names, love_combination, love_split))
+        self.save(self.combine(self.birthday, love_combination, love_split))
+        self.save(self.combine(self.company, love_combination, love_split))
+
 if __name__ == '__main__':
-    args = ['-x', 'teng', '-m', 'jun', '-e', 'nick', '-b', '19890624', '-c', 'intsig']
-    msg = '-x zhang -m san -e Tony -b 19940509 -l apple -c google'
+    msg = '-x zhang -m san -e Tony -b 19940509 -l apple -c google -l apple'
     parser = optparse.OptionParser('usage: %prog ' + msg, version="%prog 1.0")
     parser.add_option('-x', '--xing', dest='xing', default='', type='string', help='姓')
     parser.add_option('-m', '--ming', dest='ming', default='', type='string', help='名')
     parser.add_option('-e', '--en', dest='en_name', default='', type='string', help='英文名')
-    parser.add_option('-b', '--birthday', dest='birthday', default=None, type='string', help='出生日期（阳历）')
-    parser.add_option('-c', '--company', dest='company', default=None, type='string', help='公司')
-    parser.add_option('--length', dest='length', default=6, type='int', help='密码长度')
-    (options, args) = parser.parse_args(args)
-    d = SubNames(options)
+    parser.add_option('-b', '--birthday', dest='birthday', default='', type='string', help='出生日期（阳历）')
+    parser.add_option('-c', '--company', dest='company', default='', type='string', help='公司')
+    parser.add_option('-l', '--love', dest='love', default='', type='string', help='喜爱')
+    parser.add_option('--length', dest='length', default=6, type='int', help='密码最小长度，默认为6位')
+    (options, args) = parser.parse_args()
+    sub_names = SubNames(options)
+    sub_names.output()
+
 
