@@ -146,3 +146,4 @@ if __name__ == '__main__':
     parser.add_option('--length', dest='length', default=6, type='int', help='密码长度')
     (options, args) = parser.parse_args(args)
     d = SubNames(options)
+
